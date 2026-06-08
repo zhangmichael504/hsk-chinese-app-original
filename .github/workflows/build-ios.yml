@@ -4,13 +4,13 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch: # Allows you to manually click a button to run the build anytime
-  defaults:
-      run:
-        working-directory: ./hsk-chinese-app-original
 
 jobs:
   compile-project:
     runs-on: macos-14 # Provisions an Apple Silicon M1/M2 virtual Mac runner
+    defaults:
+      run:
+        working-directory: ./hsk-chinese-app-original
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
