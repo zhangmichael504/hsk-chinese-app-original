@@ -1,0 +1,44 @@
+name: Build iOS Simulator App
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows you to manually click a button to run the build anytime
+
+jobs:
+  compile-project:
+    runs-on: macos-14 # Provisions an Apple Silicon M1/M2 virtual Mac runner
+    defaults:
+      run:
+        working-directory: ./hsk-chinese-app-original    
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Select Stable Xcode Environment
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 'latest-stable'
+
+      - name: Build for Simulator Architecture
+        run: |
+          xcodebuild build \
+            -scheme "iphone_24_game" \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            CONFIGURATION_BUILD_DIR=${{ github.workspace }}/output-build
+        # IMPORTANT: If your app uses CocoaPods, swap the lines above to use:
+        # -workspace iphone_24_game.xcworkspace -scheme "iphone_24_game" \
+
+      - name: Compress App Into Simulator Zip
+        run: |
+          cd ${{ github.workspace }}/output-build
+          zip -r TargetSimulatorApp.zip *.app
+
+      - name: Export Zip Package as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-ios-simulator-build
+          path: ${{ github.workspace }}/output-build/TargetSimulatorApp.zip
+          retention-days: 5
