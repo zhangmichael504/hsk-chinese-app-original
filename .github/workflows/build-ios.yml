@@ -18,27 +18,27 @@ jobs:
         with:
           xcode-version: 'latest-stable'
 
-      - name: Archive App Bundle via Xcode CLI
+      - name: Build Universal App Bundle via Xcode CLI
         run: |
-          xcodebuild archive \
+          xcodebuild build \
             -scheme HSKChineseApp \
-            -destination "generic/platform=iOS Simulator" \
-            -archivePath ${{ github.workspace }}/output.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            INFOPLIST_FILE=Sources/HSKChineseApp/Info.plist
+            -sdk iphonesimulator \
+            -configuration Debug \
+            ONLY_ACTIVE_ARCH=NO \
+            CONFIGURATION_BUILD_DIR=${{ github.workspace }}/output-build
 
       - name: Structure and Compress App Bundle
         run: |
-          # 1. Force create the actual .app directory folder structure first
+          # 1. Create a clean payload assembly folder
           mkdir -p ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app
           
-          # 2. Copy the compiled binary executable directly INSIDE the folder
-          cp ${{ github.workspace }}/output.xcarchive/Products/usr/local/bin/HSKChineseApp ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/HSKChineseApp
+          # 2. Extract the universal simulator binary from the build outputs
+          cp ${{ github.workspace }}/output-build/HSKChineseApp ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/HSKChineseApp
           
-          # 3. Copy the Info.plist properties file directly INSIDE the folder
+          # 3. Inject the Info.plist properties manifest directly inside the bundle folder
           cp Sources/HSKChineseApp/Info.plist ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/Info.plist
           
-          # 4. Compress the verified app layer into your final archive zip file
+          # 4. Compress the verified structural app bundle into your final artifact package
           cd ${{ github.workspace }}/AppetizeBuild
           zip -r HSKChineseApp.zip HSKChineseApp.app
 
