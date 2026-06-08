@@ -26,11 +26,21 @@ jobs:
             -configuration Debug \
             CONFIGURATION_BUILD_DIR=${{ github.workspace }}/output-build
 
-      - name: Compress App Bundle into ZIP
+      - name: Locate and Compress App Bundle
         run: |
-          cd ${{ github.workspace }}/output-build
-          # Looks into subfolders to find the .app bundle automatically
-          zip -r HSKChineseApp.zip *.app */*.app || true
+          # Dynamically look for the .app folder location
+          APP_PATH=$(find ${{ github.workspace }}/output-build -name "*.app" -type d | head -n 1)
+          
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: Could not find any compiled .app bundle folder!"
+            exit 1
+          fi
+          
+          echo "Found app bundle at: $APP_PATH"
+          
+          # Move into the folder holding the .app bundle and zip it
+          cd "$(dirname "$APP_PATH")"
+          zip -r ${{ github.workspace }}/output-build/HSKChineseApp.zip "$(basename "$APP_PATH")"
 
       - name: Export Zip Package as Artifact
         uses: actions/upload-artifact@v4
