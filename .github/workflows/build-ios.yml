@@ -1,41 +1,33 @@
-name: Build iOS Simulator App
+name: Build iOS App Package
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Allows you to manually click a button to run the build anytime
+  workflow_dispatch:
 
 jobs:
-  compile-project:
-    runs-on: macos-14 # Provisions an Apple Silicon M1/M2 virtual Mac runner
+  build:
+    runs-on: macos-14
+
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Select Stable Xcode Environment
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: 'latest-stable'
-
-      - name: Build for Simulator Architecture
+      - name: Compile Swift Package for iOS Simulator
         run: |
-          xcodebuild build \
-            -scheme "hsk-chinese-app-original" \
-            -sdk iphonesimulator \
-            -destination "generic/platform=iOS Simulator" \
-            -configuration Debug \
-            CONFIGURATION_BUILD_DIR=${{ github.workspace }}/output-build
-        # IMPORTANT: If your app uses CocoaPods, swap the lines above to use:
-        # -workspace iphone_24_game.xcworkspace -scheme "iphone_24_game" \
+          swift build \
+            -c debug \
+            --triple arm64-apple-ios17.0-simulator \
+            --build-path ./output-build
 
-      - name: Compress App Into Simulator Zip
+      - name: Compress Compiled Binary into ZIP
         run: |
-          cd ${{ github.workspace }}/output-build
-          zip -r TargetSimulatorApp.zip *.app
+          cd ./output-build/arm64-apple-ios17.0-simulator/debug
+          zip -r HSKChineseApp.zip *
 
       - name: Export Zip Package as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: compiled-ios-simulator-build
-          path: ${{ github.workspace }}/output-build/TargetSimulatorApp.zip
+          name: compiled-ios-app
+          path: ./output-build/arm64-apple-ios17.0-simulator/debug/HSKChineseApp.zip
           retention-days: 5
