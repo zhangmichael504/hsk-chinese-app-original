@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch: # Allows you to manually click a button to run the build anytime
+  defaults:
+      run:
+        working-directory: ./hsk-chinese-app-original
 
 jobs:
   compile-project:
