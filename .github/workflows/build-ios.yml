@@ -18,33 +18,34 @@ jobs:
         with:
           xcode-version: 'latest-stable'
 
-      - name: Build App Bundle via Xcode CLI
+      - name: Archive App Bundle via Xcode CLI
         run: |
-          xcodebuild build \
+          xcodebuild archive \
             -scheme HSKChineseApp \
             -destination "generic/platform=iOS Simulator" \
-            -configuration Debug \
-            CONFIGURATION_BUILD_DIR=${{ github.workspace }}/output-build
+            -archivePath ${{ github.workspace }}/output.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            INFOPLIST_FILE=Sources/HSKChineseApp/Info.plist
 
-      - name: Locate and Compress App Bundle
+      - name: Structure and Compress App Bundle
         run: |
-          # Dynamically look for the .app folder location
-          APP_PATH=$(find ${{ github.workspace }}/output-build -name "*.app" -type d | head -n 1)
+          # 1. Create a clean payload folder layout matching what Appetize expects
+          mkdir -id ${{ github.workspace }}/AppetizeBuild
           
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: Could not find any compiled .app bundle folder!"
-            exit 1
-          fi
+          # 2. Extract the generated .app framework bundle out from the archive
+          cp -R ${{ github.workspace }}/output.xcarchive/Products/usr/local/bin/HSKChineseApp ${{ github.workspace }}/AppetizeBuild/HSKChineseApp
+          mv ${{ github.workspace }}/AppetizeBuild/HSKChineseApp ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app
           
-          echo "Found app bundle at: $APP_PATH"
+          # 3. Inject the Info.plist properties manifest directly inside the final target bundle
+          cp Sources/HSKChineseApp/Info.plist ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/Info.plist
           
-          # Move into the folder holding the .app bundle and zip it
-          cd "$(dirname "$APP_PATH")"
-          zip -r ${{ github.workspace }}/output-build/HSKChineseApp.zip "$(basename "$APP_PATH")"
+          # 4. Compress the verified app layer into your final archive zip file
+          cd ${{ github.workspace }}/AppetizeBuild
+          zip -r HSKChineseApp.zip HSKChineseApp.app
 
       - name: Export Zip Package as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: compiled-ios-app
-          path: ${{ github.workspace }}/output-build/HSKChineseApp.zip
+          path: ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.zip
           retention-days: 5
