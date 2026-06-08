@@ -29,14 +29,14 @@ jobs:
 
       - name: Structure and Compress App Bundle
         run: |
-          # 1. Create a clean payload folder layout matching what Appetize expects
-          mkdir -id ${{ github.workspace }}/AppetizeBuild
+          # 1. Corrected Mac folder generation flag (-p instead of -id)
+          mkdir -p ${{ github.workspace }}/AppetizeBuild
           
-          # 2. Extract the generated .app framework bundle out from the archive
+          # 2. Extract the generated binary out from the archive output
           cp -R ${{ github.workspace }}/output.xcarchive/Products/usr/local/bin/HSKChineseApp ${{ github.workspace }}/AppetizeBuild/HSKChineseApp
           mv ${{ github.workspace }}/AppetizeBuild/HSKChineseApp ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app
           
-          # 3. Inject the Info.plist properties manifest directly inside the final target bundle
+          # 3. Inject the Info.plist properties manifest directly inside the target bundle
           cp Sources/HSKChineseApp/Info.plist ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/Info.plist
           
           # 4. Compress the verified app layer into your final archive zip file
