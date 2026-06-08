@@ -23,7 +23,7 @@ jobs:
       - name: Build for Simulator Architecture
         run: |
           xcodebuild build \
-            -scheme "iphone_24_game" \
+            -scheme "hsk-chinese-app-original" \
             -sdk iphonesimulator \
             -destination "generic/platform=iOS Simulator" \
             -configuration Debug \
