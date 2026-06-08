@@ -29,7 +29,8 @@ jobs:
       - name: Compress App Bundle into ZIP
         run: |
           cd ${{ github.workspace }}/output-build
-          zip -r HSKChineseApp.zip *.app
+          # Looks into subfolders to find the .app bundle automatically
+          zip -r HSKChineseApp.zip *.app */*.app || true
 
       - name: Export Zip Package as Artifact
         uses: actions/upload-artifact@v4
