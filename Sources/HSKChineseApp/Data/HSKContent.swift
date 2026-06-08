@@ -404,7 +404,7 @@ struct HSKContent {
         ("演绎和归纳是两种基本推理方法。", "Yǎn yì hé guī nà shì liǎng zhǒng jī běn tuī lǐ fāng fǎ.", "Deduction and induction are two basic reasoning methods."),
         ("这个命题需要严格的论证。", "Zhè gè mìng tí xū yào yán gé de lùn zhèng.", "This proposition requires rigorous argumentation."),
         ("悖论揭示了逻辑的局限性。", "Bèi lùn jiē shì le luó ji de jú xiàn xìng.", "Paradoxes reveal the limitations of logic."),
-        ("综合分析有助于全面理解问题。", "Zōng hé fēn xī yǒu zhù yú quán miàn lǐ jiě wèn tí.", "Comprehensive analysis helps to understand issues fully.", level: 7),
+        ("综合分析有助于全面理解问题。", "Zōng hé fēn xī yǒu zhù yú quán miàn lǐ jiě wèn tí.", "Comprehensive analysis helps to understand issues fully.",),
     ])
 
     static let level8Words: [HSKWord] = generatePlaceholderWords(level: 8, examples: [
