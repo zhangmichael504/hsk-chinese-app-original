@@ -8,9 +8,6 @@ on:
 jobs:
   compile-project:
     runs-on: macos-14 # Provisions an Apple Silicon M1/M2 virtual Mac runner
-    defaults:
-      run:
-        working-directory: ./hsk-chinese-app-original    
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
