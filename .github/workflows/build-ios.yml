@@ -29,12 +29,12 @@ jobs:
 
       - name: Compress Compiled Binary into ZIP
         run: |
-          cd ./output-build/arm64-apple-ios17.0-simulator/debug
+          cd ./output-build/debug
           zip -r HSKChineseApp.zip *
 
       - name: Export Zip Package as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: compiled-ios-app
-          path: ./output-build/arm64-apple-ios17.0-simulator/debug/HSKChineseApp.zip
+          path: ./output-build/debug/HSKChineseApp.zip
           retention-days: 5
