@@ -18,23 +18,22 @@ jobs:
         with:
           xcode-version: 'latest-stable'
 
-      - name: Compile Swift Package for iOS Simulator
+      - name: Build App Bundle via Xcode CLI
         run: |
-          swift build \
-            -c debug \
-            --triple arm64-apple-ios17.0-simulator \
-            -Xswiftc -sdk -Xswiftc "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
-            -Xcc -isysroot -Xcc "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
-            --build-path ./output-build
+          xcodebuild build \
+            -scheme HSKChineseApp \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            CONFIGURATION_BUILD_DIR=${{ github.workspace }}/output-build
 
-      - name: Compress Compiled Binary into ZIP
+      - name: Compress App Bundle into ZIP
         run: |
-          cd ./output-build/debug
-          zip -r HSKChineseApp.zip *
+          cd ${{ github.workspace }}/output-build
+          zip -r HSKChineseApp.zip *.app
 
       - name: Export Zip Package as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: compiled-ios-app
-          path: ./output-build/debug/HSKChineseApp.zip
+          path: ${{ github.workspace }}/output-build/HSKChineseApp.zip
           retention-days: 5
