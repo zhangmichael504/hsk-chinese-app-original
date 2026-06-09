@@ -18,38 +18,34 @@ jobs:
         with:
           xcode-version: 'latest-stable'
 
-      - name: Compile Graphical Universal App Bundle
+      - name: Compile Package Binary
         run: |
-          # Build the Swift Package using the system simulator destination
+          # Build your package target directly as a universal simulator binary executable
           xcodebuild build \
             -scheme HSKChineseApp \
             -sdk iphonesimulator \
             -destination "generic/platform=iOS Simulator" \
             -configuration Debug \
-            ONLY_ACTIVE_ARCH=NO
+            ONLY_ACTIVE_ARCH=NO \
+            CONFIGURATION_BUILD_DIR=${{ github.workspace }}/output-build
 
-      - name: Package App Bundle for Web Emulators
+      - name: Manually Construct Graphical .app Bundle
         run: |
-          # 1. Ensure our final staging folder layout exists cleanly
+          # 1. Clear out old builds and explicitly generate a clean .app folder container
+          rm -rf ${{ github.workspace }}/AppetizeBuild
           mkdir -p ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app
           
-          # 2. Search Xcode's GLOBAL system folder for the generated HSKChineseApp.app bundle
-          REAL_APP_DIR=$(find ~/Library/Developer/Xcode/DerivedData -name "HSKChineseApp.app" -type d | head -n 1)
+          # 2. Copy your raw compiled binary executable straight inside and rename it to match the scheme
+          cp ${{ github.workspace }}/output-build/HSKChineseApp ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/HSKChineseApp
+          chmod +x ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/HSKChineseApp
           
-          if [ -z "$REAL_APP_DIR" ]; then
-            echo "Error: Graphical .app wrapper layer missing from global build engine!"
-            exit 1
-          fi
-          
-          echo "Success! Found true app bundle at: $REAL_APP_DIR"
-          
-          # 3. Copy the compiled structural assets and binary components into our target staging zone
-          cp -R "$REAL_APP_DIR/" ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/
-          
-          # 4. Enforce the Info.plist layout manifest rules precisely inside the target bundle
+          # 3. Inject your Info.plist properties manifest directly inside the target bundle container
           cp Sources/HSKChineseApp/Info.plist ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/Info.plist
           
-          # 5. Compress the verified, multi-architecture bundle into a zip archive
+          # 4. Generate a required boilerplate PkgInfo structural tag file so Apple's engine recognizes it as a GUI application
+          echo -n "APPL????" > ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/PkgInfo
+          
+          # 5. Compress the custom structural bundle folder into the final artifact zip archive
           cd ${{ github.workspace }}/AppetizeBuild
           zip -r HSKChineseApp.zip HSKChineseApp.app
 
