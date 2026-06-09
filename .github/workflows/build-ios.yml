@@ -10,6 +10,17 @@ jobs:
     runs-on: macos-14
 
     steps:
+      - name: Debug - List repository structure
+        run: |
+         echo "=== 仓库根目录内容 ==="
+         ls -la
+         echo ""
+         echo "=== 递归查找 .xcodeproj 和 .xcworkspace ==="
+         find . -name "*.xcodeproj" -type d
+         find . -name "*.xcworkspace" -type d
+         echo ""
+         echo "=== 查找可能的 iOS 项目文件夹 ==="
+         find . -type d -name "ios" -o -name "iOS" -o -name "HSKChineseApp"
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
