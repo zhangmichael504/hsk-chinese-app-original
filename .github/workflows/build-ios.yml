@@ -18,43 +18,10 @@ jobs:
         with:
           xcode-version: 'latest-stable'
 
-      - name: Generate Native iOS Project Wrapper
+      - name: Compile Universal App Bundle via Xcode CLI
         run: |
-          # 1. Create a temporary staging zone for a true native iOS App structure
-          mkdir -p AppWrapper/HSKChineseApp
-          
-          # 2. Write a minimal native main entry file that launches your Package target
-          cat << 'EOF' > AppWrapper/HSKChineseApp/main.swift
-          import SwiftUI
-          import HSKChineseApp
-
-          // Directs the system processor to boot your package's custom SwiftUI entry view
-          App.main()
-          EOF
-
-          # 3. Create a dynamic native Xcode project mapping using Apple's terminal utilities
-          # This converts the project from a command-line utility into an official GUI Application (.app)
-          cat << 'EOF' > AppWrapper/project.json
-          {
-            "targets": {
-              "HSKChineseApp": {
-                "type": "application",
-                "platform": "iOS",
-                "deploymentTarget": "17.0",
-                "sources": ["HSKChineseApp"],
-                "dependencies": [
-                  {"package": "HSKChineseApp"}
-                ]
-              }
-            }
-          }
-          EOF
-
-      - name: Compile Graphical Universal App Bundle
-        run: |
-          # Build a clean, simulator-ready application container including the necessary graphic frameworks
+          # Build the Swift package scheme directly using the iphonesimulator SDK
           xcodebuild build \
-            -packagepath . \
             -scheme HSKChineseApp \
             -sdk iphonesimulator \
             -destination "generic/platform=iOS Simulator" \
@@ -67,13 +34,13 @@ jobs:
           # 1. Ensure our final deployment output directory exists
           mkdir -p ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app
           
-          # 2. Extract the proper executable binary built by the simulator engine
+          # 2. Extract the universal simulator binary from the build outputs
           cp ${{ github.workspace }}/output-build/HSKChineseApp ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/HSKChineseApp
           
-          # 3. Inject the Info.plist manifest so the device knows how to display the interface
+          # 3. Inject the Info.plist properties manifest directly inside the bundle folder
           cp Sources/HSKChineseApp/Info.plist ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/Info.plist
           
-          # 4. Package the bundle structure tightly for Appetize
+          # 4. Compress the verified structural app bundle into your final artifact package
           cd ${{ github.workspace }}/AppetizeBuild
           zip -r HSKChineseApp.zip HSKChineseApp.app
 
