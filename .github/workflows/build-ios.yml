@@ -8,7 +8,7 @@ jobs:
     runs-on: macos-14
     
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Source Codes
         uses: actions/checkout@v4
         
       - name: Select Xcode
