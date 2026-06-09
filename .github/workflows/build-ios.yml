@@ -16,42 +16,67 @@ jobs:
         with:
           xcode-version: 'latest-stable'
           
-      - name: Generate Xcode Project
-        run: |
-          # 从 Package.swift 生成 Xcode 项目
-          swift package generate-xcodeproj
-          
       - name: Build for iOS Simulator
         run: |
-          # 使用生成的 Xcode 项目构建
-          xcodebuild build \
-            -project HSKChineseApp.xcodeproj \
-            -scheme HSKChineseApp-Package \
-            -sdk iphonesimulator \
-            -configuration Debug \
-            -derivedDataPath DerivedData \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO
+          # 为 iOS 模拟器构建
+          swift build \
+            -c debug \
+            --triple arm64-apple-ios-simulator \
+            --product HSKChineseApp
           
-      - name: Package .app Bundle
+      - name: Create .app Bundle Structure
         run: |
-          # 查找生成的 .app 文件
-          APP_PATH=$(find DerivedData -name "*.app" -type d | head -n 1)
+          # Swift Package Manager 构建产物位置
+          BUILD_DIR=".build/arm64-apple-ios-simulator/debug"
+          EXECUTABLE_PATH="$BUILD_DIR/HSKChineseApp"
           
-          if [ -z "$APP_PATH" ]; then
-            echo "❌ 找不到 .app 文件"
-            echo "搜索整个 DerivedData:"
-            find DerivedData -type d | head -20
+          # 检查可执行文件是否存在
+          if [ ! -f "$EXECUTABLE_PATH" ]; then
+            echo "❌ 可执行文件不存在"
+            echo "查找实际位置："
+            find .build -name "HSKChineseApp" -type f
             exit 1
           fi
           
-          echo "✅ 找到 .app 文件: $APP_PATH"
+          echo "✅ 找到可执行文件：$EXECUTABLE_PATH"
           
-          # 复制并打包
-          mkdir -p AppetizeBuild
-          cp -R "$APP_PATH" AppetizeBuild/
+          # 手动创建 .app bundle（因为 swift build 不自动创建）
+          mkdir -p AppetizeBuild/HSKChineseApp.app
+          
+          # 复制可执行文件
+          cp "$EXECUTABLE_PATH" AppetizeBuild/HSKChineseApp.app/HSKChineseApp
+          chmod +x AppetizeBuild/HSKChineseApp.app/HSKChineseApp
+          
+          # 创建 Info.plist（必需）
+          cat > AppetizeBuild/HSKChineseApp.app/Info.plist << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>HSKChineseApp</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.yourcompany.HSKChineseApp</string>
+    <key>CFBundleName</key>
+    <string>HSKChineseApp</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+</dict>
+</plist>
+EOF
+          
+          # 创建 PkgInfo
+          echo -n "APPL????" > AppetizeBuild/HSKChineseApp.app/PkgInfo
+          
+          # 打包
           cd AppetizeBuild
-          zip -r ${{ github.workspace }}/HSKChineseApp.zip *.app
+          zip -r ${{ github.workspace }}/HSKChineseApp.zip HSKChineseApp.app
+          
+          echo "✅ ZIP 文件创建成功"
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
