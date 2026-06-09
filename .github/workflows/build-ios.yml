@@ -1,110 +1,60 @@
-name: Build True iOS App Container
+name: Build iOS App for Appetize
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-14
-
+    
     steps:
-      - name: Debug - List repository structure
-        run: |
-         echo "=== 仓库根目录内容 ==="
-         ls -la
-         echo ""
-         echo "=== 递归查找 .xcodeproj 和 .xcworkspace ==="
-         find . -name "*.xcodeproj" -type d
-         find . -name "*.xcworkspace" -type d
-         echo ""
-         echo "=== 查找可能的 iOS 项目文件夹 ==="
-         find . -type d -name "ios" -o -name "iOS" -o -name "HSKChineseApp"
       - name: Checkout Source Code
         uses: actions/checkout@v4
-
-      - name: Select Stable Xcode Environment
+        
+      - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: 'latest-stable'
-
-      # 🔧 新增：安装项目依赖（根据你的项目类型选择）
-      - name: Install Dependencies
-        run: |
-          # 如果你的项目使用 CocoaPods
-          if [ -f "Podfile" ]; then
-            sudo gem install cocoapods
-            pod install
-          fi
           
-          # 如果你的项目使用 SPM（Swift Package Manager）
-          # 通常不需要额外命令，xcodebuild 会自动处理
-
-      # 🔧 修正：正确的构建方式
+      - name: Generate Xcode Project
+        run: |
+          # 从 Package.swift 生成 Xcode 项目
+          swift package generate-xcodeproj
+          
       - name: Build for iOS Simulator
         run: |
-          # 首先确定使用 workspace 还是 project
-          if [ -f "HSKChineseApp.xcworkspace" ]; then
-            WORKSPACE_OR_PROJECT="-workspace HSKChineseApp.xcworkspace"
-          elif [ -f "HSKChineseApp.xcodeproj" ]; then
-            WORKSPACE_OR_PROJECT="-project HSKChineseApp.xcodeproj"
-          else
-            echo "❌ 找不到 .xcworkspace 或 .xcodeproj 文件"
-            exit 1
-          fi
-          
-          # 构建并指定输出路径
+          # 使用生成的 Xcode 项目构建
           xcodebuild build \
-            $WORKSPACE_OR_PROJECT \
-            -scheme HSKChineseApp \
+            -project HSKChineseApp.xcodeproj \
+            -scheme HSKChineseApp-Package \
             -sdk iphonesimulator \
             -configuration Debug \
-            -derivedDataPath ${{ github.workspace }}/DerivedData \
+            -derivedDataPath DerivedData \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
-
-      # 🔧 新增：找到并准备 .app bundle
-      - name: Prepare .app Bundle for Appetize
+            CODE_SIGNING_REQUIRED=NO
+          
+      - name: Package .app Bundle
         run: |
-          # 查找构建生成的 .app 文件
-          APP_PATH=$(find ${{ github.workspace }}/DerivedData -name "*.app" -type d | head -n 1)
+          # 查找生成的 .app 文件
+          APP_PATH=$(find DerivedData -name "*.app" -type d | head -n 1)
           
           if [ -z "$APP_PATH" ]; then
-            echo "❌ 找不到编译生成的 .app 文件"
+            echo "❌ 找不到 .app 文件"
+            echo "搜索整个 DerivedData:"
+            find DerivedData -type d | head -20
             exit 1
           fi
           
           echo "✅ 找到 .app 文件: $APP_PATH"
           
-          # 创建用于 Appetize 的文件夹
-          mkdir -p ${{ github.workspace }}/AppetizeBuild
+          # 复制并打包
+          mkdir -p AppetizeBuild
+          cp -R "$APP_PATH" AppetizeBuild/
+          cd AppetizeBuild
+          zip -r ${{ github.workspace }}/HSKChineseApp.zip *.app
           
-          # 复制整个 .app bundle
-          cp -R "$APP_PATH" ${{ github.workspace }}/AppetizeBuild/
-          
-          # 验证 bundle 结构
-          BUNDLE_NAME=$(basename "$APP_PATH")
-          echo "✅ Bundle 名称: $BUNDLE_NAME"
-          
-          # 检查可执行文件是否存在
-          EXECUTABLE_PATH="${{ github.workspace }}/AppetizeBuild/$BUNDLE_NAME/$(basename "$BUNDLE_NAME" .app)"
-          if [ -f "$EXECUTABLE_PATH" ]; then
-            echo "✅ 可执行文件存在: $EXECUTABLE_PATH"
-          else
-            echo "⚠️ 警告：找不到可执行文件，但继续执行"
-          fi
-          
-          # 打包成 ZIP
-          cd ${{ github.workspace }}/AppetizeBuild
-          zip -r HSKChineseApp.zip "$BUNDLE_NAME"
-          
-          echo "✅ ZIP 文件创建成功"
-
-      - name: Export Zip Package as Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: compiled-ios-app
-          path: ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.zip
-          retention-days: 5
+          name: appetize-build
+          path: HSKChineseApp.zip
