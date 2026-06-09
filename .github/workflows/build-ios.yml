@@ -18,36 +18,78 @@ jobs:
         with:
           xcode-version: 'latest-stable'
 
-      - name: Compile Package Binary
+      # 🔧 新增：安装项目依赖（根据你的项目类型选择）
+      - name: Install Dependencies
         run: |
-          # Build your package target directly as a universal simulator binary executable
+          # 如果你的项目使用 CocoaPods
+          if [ -f "Podfile" ]; then
+            sudo gem install cocoapods
+            pod install
+          fi
+          
+          # 如果你的项目使用 SPM（Swift Package Manager）
+          # 通常不需要额外命令，xcodebuild 会自动处理
+
+      # 🔧 修正：正确的构建方式
+      - name: Build for iOS Simulator
+        run: |
+          # 首先确定使用 workspace 还是 project
+          if [ -f "HSKChineseApp.xcworkspace" ]; then
+            WORKSPACE_OR_PROJECT="-workspace HSKChineseApp.xcworkspace"
+          elif [ -f "HSKChineseApp.xcodeproj" ]; then
+            WORKSPACE_OR_PROJECT="-project HSKChineseApp.xcodeproj"
+          else
+            echo "❌ 找不到 .xcworkspace 或 .xcodeproj 文件"
+            exit 1
+          fi
+          
+          # 构建并指定输出路径
           xcodebuild build \
+            $WORKSPACE_OR_PROJECT \
             -scheme HSKChineseApp \
             -sdk iphonesimulator \
-            -destination "generic/platform=iOS Simulator" \
             -configuration Debug \
-            ONLY_ACTIVE_ARCH=NO \
-            CONFIGURATION_BUILD_DIR=${{ github.workspace }}/output-build
+            -derivedDataPath ${{ github.workspace }}/DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
-      - name: Manually Construct Graphical .app Bundle
+      # 🔧 新增：找到并准备 .app bundle
+      - name: Prepare .app Bundle for Appetize
         run: |
-          # 1. Clear out old builds and explicitly generate a clean .app folder container
-          rm -rf ${{ github.workspace }}/AppetizeBuild
-          mkdir -p ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app
+          # 查找构建生成的 .app 文件
+          APP_PATH=$(find ${{ github.workspace }}/DerivedData -name "*.app" -type d | head -n 1)
           
-          # 2. Copy your raw compiled binary executable straight inside and rename it to match the scheme
-          cp ${{ github.workspace }}/output-build/HSKChineseApp ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/HSKChineseApp
-          chmod +x ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/HSKChineseApp
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ 找不到编译生成的 .app 文件"
+            exit 1
+          fi
           
-          # 3. Inject your Info.plist properties manifest directly inside the target bundle container
-          cp Sources/HSKChineseApp/Info.plist ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/Info.plist
+          echo "✅ 找到 .app 文件: $APP_PATH"
           
-          # 4. Generate a required boilerplate PkgInfo structural tag file so Apple's engine recognizes it as a GUI application
-          echo -n "APPL????" > ${{ github.workspace }}/AppetizeBuild/HSKChineseApp.app/PkgInfo
+          # 创建用于 Appetize 的文件夹
+          mkdir -p ${{ github.workspace }}/AppetizeBuild
           
-          # 5. Compress the custom structural bundle folder into the final artifact zip archive
+          # 复制整个 .app bundle
+          cp -R "$APP_PATH" ${{ github.workspace }}/AppetizeBuild/
+          
+          # 验证 bundle 结构
+          BUNDLE_NAME=$(basename "$APP_PATH")
+          echo "✅ Bundle 名称: $BUNDLE_NAME"
+          
+          # 检查可执行文件是否存在
+          EXECUTABLE_PATH="${{ github.workspace }}/AppetizeBuild/$BUNDLE_NAME/$(basename "$BUNDLE_NAME" .app)"
+          if [ -f "$EXECUTABLE_PATH" ]; then
+            echo "✅ 可执行文件存在: $EXECUTABLE_PATH"
+          else
+            echo "⚠️ 警告：找不到可执行文件，但继续执行"
+          fi
+          
+          # 打包成 ZIP
           cd ${{ github.workspace }}/AppetizeBuild
-          zip -r HSKChineseApp.zip HSKChineseApp.app
+          zip -r HSKChineseApp.zip "$BUNDLE_NAME"
+          
+          echo "✅ ZIP 文件创建成功"
 
       - name: Export Zip Package as Artifact
         uses: actions/upload-artifact@v4
